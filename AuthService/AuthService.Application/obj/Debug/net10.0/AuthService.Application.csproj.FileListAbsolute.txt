@@ -1,0 +1,16 @@
+D:\Perry\Backend-client\AuthService\AuthService.Application\bin\Debug\net10.0\AuthService.Application.deps.json
+D:\Perry\Backend-client\AuthService\AuthService.Application\bin\Debug\net10.0\AuthService.Application.dll
+D:\Perry\Backend-client\AuthService\AuthService.Application\bin\Debug\net10.0\AuthService.Application.pdb
+D:\Perry\Backend-client\AuthService\AuthService.Application\bin\Debug\net10.0\AuthService.Domain.dll
+D:\Perry\Backend-client\AuthService\AuthService.Application\bin\Debug\net10.0\AuthService.Domain.pdb
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.csproj.AssemblyReference.cache
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.GeneratedMSBuildEditorConfig.editorconfig
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.AssemblyInfoInputs.cache
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.AssemblyInfo.cs
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.csproj.CoreCompileInputs.cache
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.sourcelink.json
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthServ.67992DEE.Up2Date
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.dll
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\refint\AuthService.Application.dll
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\AuthService.Application.pdb
+D:\Perry\Backend-client\AuthService\AuthService.Application\obj\Debug\net10.0\ref\AuthService.Application.dll
