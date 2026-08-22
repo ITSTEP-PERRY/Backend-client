@@ -11,6 +11,6 @@ https://perry-auth-service.orangeplant-910928aa.swedencentral.azurecontainerapps
 
 ## 📚 API Documentation
 
-Полное описание доступных API endpoints, параметров запросов и ответов находится здесь:
+Полное описание доступных API endpoints находится здесь:
 
 [`docs/API.md`](docs/API.md)
