@@ -86,12 +86,9 @@ public class AuthService : IAuthService
 
         if (user.EmailVerified)
         {
-            return new VerifyEmailResponse
-            {
-                EmailVerified = true,
-                Email = user.Email,
-                RegistrationToken = _registrationTokens.Generate(user.Id)
-            };
+            throw new EmailVerificationException(
+                EmailVerificationErrorCodes.EmailAlreadyVerified,
+                "Email is already verified.");
         }
 
         var verificationCode = await _codes.GetLatestByUserIdAsync(
