@@ -61,6 +61,7 @@ public static class DependencyInjection
             serviceProvider.GetRequiredService<AuthDbContext>());
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAuthCodeConcurrencyLock, PostgresAuthCodeConcurrencyLock>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IPasswordResetCodeRepository, PasswordResetCodeRepository>();
         services.AddHttpClient<IEmailService, ResendEmailService>();

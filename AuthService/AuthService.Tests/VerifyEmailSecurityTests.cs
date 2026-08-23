@@ -144,7 +144,8 @@ public sealed class VerifyEmailSecurityTests
             new StubRefreshTokenService(),
             new StubRefreshTokenRepository(),
             new StubPasswordResetCodeRepository(),
-            registrationTokens);
+            registrationTokens,
+            new PassThroughAuthCodeConcurrencyLock());
 
         return new Fixture(service, user, code, codes, registrationTokens);
     }
@@ -219,6 +220,14 @@ public sealed class VerifyEmailSecurityTests
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
+    }
+
+    private sealed class PassThroughAuthCodeConcurrencyLock : IAuthCodeConcurrencyLock
+    {
+        public Task<T> ExecuteAsync<T>(
+            string normalizedEmail,
+            Func<CancellationToken, Task<T>> action,
+            CancellationToken cancellationToken = default) => action(cancellationToken);
     }
 
     private sealed class StubPasswordHasher : IPasswordHasher

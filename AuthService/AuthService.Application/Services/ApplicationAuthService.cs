@@ -18,12 +18,14 @@ public class AuthService : IAuthService
     private readonly IRefreshTokenRepository _refreshTokens;
     private readonly IPasswordResetCodeRepository _passwordResetCodes;
     private readonly IRegistrationTokenService _registrationTokens;
+    private readonly IAuthCodeConcurrencyLock _codeConcurrencyLock;
 
     public AuthService(IUserRepository users, IEmailVerificationCodeRepository codes,
         IPasswordHasher passwordHasher, IVerificationCodeService verificationCodes,
         IEmailService emailService, IUnitOfWork unitOfWork, IJwtService jwtService,
         IRefreshTokenService refreshTokenService, IRefreshTokenRepository refreshTokens,
-        IPasswordResetCodeRepository passwordResetCodes, IRegistrationTokenService registrationTokens)
+        IPasswordResetCodeRepository passwordResetCodes, IRegistrationTokenService registrationTokens,
+        IAuthCodeConcurrencyLock codeConcurrencyLock)
     {
         _users = users;
         _codes = codes;
@@ -36,6 +38,7 @@ public class AuthService : IAuthService
         _refreshTokens = refreshTokens;
         _passwordResetCodes = passwordResetCodes;
         _registrationTokens = registrationTokens;
+        _codeConcurrencyLock = codeConcurrencyLock;
     }
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
@@ -75,6 +78,17 @@ public class AuthService : IAuthService
         CancellationToken cancellationToken = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
+        return await _codeConcurrencyLock.ExecuteAsync(
+            email,
+            ct => VerifyEmailLockedAsync(request, email, ct),
+            cancellationToken);
+    }
+
+    private async Task<VerifyEmailResponse> VerifyEmailLockedAsync(
+        VerifyEmailRequest request,
+        string email,
+        CancellationToken cancellationToken)
+    {
         var user = await _users.GetByEmailAsync(email, cancellationToken);
 
         if (user is null)
@@ -148,6 +162,24 @@ public class AuthService : IAuthService
         CancellationToken cancellationToken = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
+        var delivery = await _codeConcurrencyLock.ExecuteAsync(
+            email,
+            ct => ResendVerificationCodeLockedAsync(email, ct),
+            cancellationToken);
+
+        await _emailService.SendVerificationCodeAsync(
+            delivery.Email,
+            delivery.PlaintextCode,
+            _verificationCodes.Lifetime,
+            cancellationToken);
+
+        return delivery.Response;
+    }
+
+    private async Task<VerificationCodeDelivery> ResendVerificationCodeLockedAsync(
+        string email,
+        CancellationToken cancellationToken)
+    {
         var user = await _users.GetByEmailAsync(email, cancellationToken);
 
         if (user is null)
@@ -209,20 +241,15 @@ public class AuthService : IAuthService
 
         await _codes.AddAsync(newCode, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _emailService.SendVerificationCodeAsync(
-            user.Email,
-            plaintextCode,
-            _verificationCodes.Lifetime,
-            cancellationToken);
 
-        return new ResendVerificationCodeResponse
+        return new VerificationCodeDelivery(user.Email, plaintextCode, new ResendVerificationCodeResponse
         {
             Email = user.Email,
             CodeExpiresInSeconds = checked(
                 (int)_verificationCodes.Lifetime.TotalSeconds),
             ResendAvailableInSeconds = checked(
                 (int)_verificationCodes.ResendCooldown.TotalSeconds)
-        };
+        });
     }
     public async Task<CompleteRegistrationResponse> CompleteRegistrationAsync(CompleteRegistrationRequest request, CancellationToken cancellationToken = default)
     {
@@ -286,11 +313,30 @@ public class AuthService : IAuthService
 
     public async Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        var user = await _users.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), cancellationToken);
-        if (user is null) return;
+        var email = request.Email.Trim().ToLowerInvariant();
+        var delivery = await _codeConcurrencyLock.ExecuteAsync(
+            email,
+            ct => PreparePasswordResetCodeLockedAsync(email, ct),
+            cancellationToken);
+
+        if (delivery is null) return;
+
+        await _emailService.SendPasswordResetCodeAsync(
+            delivery.Email,
+            delivery.PlaintextCode,
+            _verificationCodes.Lifetime,
+            cancellationToken);
+    }
+
+    private async Task<PasswordResetCodeDelivery?> PreparePasswordResetCodeLockedAsync(
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var user = await _users.GetByEmailAsync(email, cancellationToken);
+        if (user is null) return null;
         var now = DateTime.UtcNow;
         var latest = await _passwordResetCodes.GetLatestByUserIdAsync(user.Id, cancellationToken);
-        if (latest is not null && now < latest.CreatedAt.Add(_verificationCodes.ResendCooldown)) return;
+        if (latest is not null && now < latest.CreatedAt.Add(_verificationCodes.ResendCooldown)) return null;
         if (latest is not null) latest.Used = true;
         var plaintextCode = _verificationCodes.GenerateCode();
         await _passwordResetCodes.AddAsync(new PasswordResetCode
@@ -299,12 +345,28 @@ public class AuthService : IAuthService
             ExpiresAt = now.Add(_verificationCodes.Lifetime), Attempts = 0, Used = false, CreatedAt = now, User = user
         }, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _emailService.SendPasswordResetCodeAsync(user.Email, plaintextCode, _verificationCodes.Lifetime, cancellationToken);
+        return new PasswordResetCodeDelivery(user.Email, plaintextCode);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        var user = await _users.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), cancellationToken);
+        var email = request.Email.Trim().ToLowerInvariant();
+        await _codeConcurrencyLock.ExecuteAsync(
+            email,
+            async ct =>
+            {
+                await ResetPasswordLockedAsync(request, email, ct);
+                return true;
+            },
+            cancellationToken);
+    }
+
+    private async Task ResetPasswordLockedAsync(
+        ResetPasswordRequest request,
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var user = await _users.GetByEmailAsync(email, cancellationToken);
         if (user is null) throw new AuthException(AuthErrorCodes.InvalidPasswordResetCode, "Password reset code is invalid.");
         var code = await _passwordResetCodes.GetLatestByUserIdAsync(user.Id, cancellationToken);
         if (code is null || code.Used) throw new AuthException(AuthErrorCodes.InvalidPasswordResetCode, "Password reset code is invalid.");
@@ -356,4 +418,11 @@ public class AuthService : IAuthService
     {
         Id = user.Id, Email = user.Email, FirstName = user.FirstName, LastName = user.LastName, EmailVerified = user.EmailVerified
     };
+
+    private sealed record VerificationCodeDelivery(
+        string Email,
+        string PlaintextCode,
+        ResendVerificationCodeResponse Response);
+
+    private sealed record PasswordResetCodeDelivery(string Email, string PlaintextCode);
 }
