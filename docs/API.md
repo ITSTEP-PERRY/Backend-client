@@ -56,14 +56,27 @@ Internal API призначений для захищеної взаємодії
 
 Для доступу використовується окремий Internal JWT. Сервіс, що викликає AuthService, повинен пройти service-to-service автентифікацію та мати необхідні permissions.
 
-Підтримувані permissions:
+| Метод | Endpoint | Опис |
+| --- | --- | --- |
+| `GET` | `/internal/users` | Повертає список користувачів для внутрішніх backend-сервісів. |
+| `GET` | `/internal/users/{id}` | Повертає інформацію про конкретного користувача за його ID. |
+| `PATCH` | `/internal/users/{id}/role` | Змінює роль користувача через внутрішній API. |
+| `PATCH` | `/internal/users/{id}/status` | Змінює статус користувача через внутрішній API. |
 
-- `users.read` — читання інформації про користувачів.
-- `users.manage` — операції керування користувачами.
+### Permissions
 
-Актуальний перелік internal endpoints та їх request/response моделей доступний у Swagger.
+Для Internal API використовуються такі permissions:
 
-> Internal credentials та signing secrets не повинні зберігатися у репозиторії або передаватися frontend-клієнтам.
+- `users.read` — дозволяє отримувати інформацію про користувачів.
+- `users.manage` — дозволяє змінювати роль та статус користувачів.
+
+Internal JWT передається через HTTP-заголовок:
+
+```http
+Authorization: Bearer <internal_access_token>
+```
+
+> Internal JWT, service credentials, credential hashes та signing secrets призначені виключно для backend-сервісів і не повинні передаватися frontend-клієнтам або зберігатися у репозиторії.
 
 ## Health checks
 
