@@ -30,6 +30,17 @@ public static class DependencyInjection
                 "JWT token lifetimes must be positive.")
             .ValidateOnStart();
 
+        services.AddOptions<InternalJwtOptions>()
+            .Bind(configuration.GetSection(InternalJwtOptions.SectionName))
+            .Validate(x => !string.IsNullOrWhiteSpace(x.Issuer), "InternalJwt:Issuer is required.")
+            .Validate(x => !string.IsNullOrWhiteSpace(x.Audience), "InternalJwt:Audience is required.")
+            .Validate(x => x.SigningSecret.Length >= 32, "InternalJwt:SigningSecret must contain at least 32 characters.")
+            .Validate(x => x.AccessTokenMinutes > 0, "InternalJwt:AccessTokenMinutes must be positive.")
+            .Validate(x => x.Services.Count > 0, "At least one InternalJwt service credential is required.")
+            .Validate(x => x.Services.All(s => !string.IsNullOrWhiteSpace(s.Name) && s.CredentialHash.Length == 64),
+                "Each internal service requires a name and SHA-256 credential hash.")
+            .ValidateOnStart();
+
         services.AddOptions<ResendOptions>()
             .Bind(configuration.GetSection(ResendOptions.SectionName))
             .Validate(
@@ -66,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordResetCodeRepository, PasswordResetCodeRepository>();
         services.AddHttpClient<IEmailService, ResendEmailService>();
         services.AddScoped<IAuthService, ApplicationAuthService>();
+        services.AddScoped<IUserManagementService, AuthService.Application.Services.UserManagementService>();
 
         services.AddScoped<
             IEmailVerificationCodeRepository,
@@ -75,6 +87,7 @@ public static class DependencyInjection
         services.AddSingleton<IJwtService, JwtService>();
         services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
         services.AddSingleton<IRegistrationTokenService, RegistrationTokenService>();
+        services.AddSingleton<IServiceTokenService, ServiceTokenService>();
 
         services.AddSingleton<
             IVerificationCodeService,

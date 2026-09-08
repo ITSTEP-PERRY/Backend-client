@@ -11,4 +11,8 @@ public class UserResponse
     public string? LastName { get; set; }
 
     public bool EmailVerified { get; set; }
+
+    public AuthService.Domain.Entities.UserRole Role { get; set; }
+
+    public AuthService.Domain.Entities.UserStatus Status { get; set; }
 }

@@ -7,10 +7,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddFluentValidationAutoValidation();
 
 builder.Services.AddValidatorsFromAssemblyContaining<
@@ -21,21 +23,55 @@ builder.Services.AddValidatorsFromAssemblyContaining<
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+var internalJwt = builder.Configuration.GetSection(InternalJwtOptions.SectionName).Get<InternalJwtOptions>() ?? new InternalJwtOptions();
 if (string.IsNullOrWhiteSpace(jwt.SigningSecret))
     throw new InvalidOperationException("JWT signing secret is not configured.");
+if (string.IsNullOrWhiteSpace(internalJwt.SigningSecret))
+    throw new InvalidOperationException("Internal JWT signing secret is not configured.");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true, ValidIssuer = jwt.Issuer,
             ValidateAudience = true, ValidAudience = jwt.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningSecret)),
-            ValidateLifetime = true, ClockSkew = TimeSpan.Zero
+            ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
+            NameClaimType = "sub", RoleClaimType = "role"
+        };
+    })
+    .AddJwtBearer(InternalAuthConstants.Scheme, options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true, ValidIssuer = internalJwt.Issuer,
+            ValidateAudience = true, ValidAudience = internalJwt.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(internalJwt.SigningSecret)),
+            ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
+            NameClaimType = "sub"
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(InternalAuthConstants.UsersReadPolicy, policy =>
+    {
+        policy.AddAuthenticationSchemes(InternalAuthConstants.Scheme);
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim(InternalAuthConstants.TokenUseClaim, InternalAuthConstants.TokenUseService);
+        policy.RequireClaim(InternalAuthConstants.PermissionClaim, InternalAuthConstants.UsersRead);
+    });
+    options.AddPolicy(InternalAuthConstants.UsersManagePolicy, policy =>
+    {
+        policy.AddAuthenticationSchemes(InternalAuthConstants.Scheme);
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim(InternalAuthConstants.TokenUseClaim, InternalAuthConstants.TokenUseService);
+        policy.RequireClaim(InternalAuthConstants.PermissionClaim, InternalAuthConstants.UsersManage);
+    });
+});
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -45,6 +81,11 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT", In = ParameterLocation.Header
+    });
+    options.AddSecurityDefinition("InternalService", new OpenApiSecurityScheme
+    {
+        Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT",
+        In = ParameterLocation.Header, Description = "Short-lived service token from POST /internal/auth/token."
     });
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
@@ -69,11 +110,9 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
@@ -87,3 +126,5 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
+
+public partial class Program;

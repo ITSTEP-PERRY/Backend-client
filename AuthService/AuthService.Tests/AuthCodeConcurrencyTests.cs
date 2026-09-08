@@ -242,10 +242,15 @@ public sealed class AuthCodeConcurrencyTests
             Task.FromResult<User?>(email == user.Email ? user : null);
         public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult<User?>(id == user.Id ? user : null);
+        public Task<User?> GetByIdReadOnlyAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult<User?>(id == user.Id ? user : null);
         public Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default) =>
             Task.FromResult(email == user.Email);
         public Task AddAsync(User addedUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpdateAsync(User updatedUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<User>> GetPageAsync(int page, int pageSize, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<User>>([user]);
+        public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
     }
 
     private sealed class MemoryEmailVerificationCodeRepository : IEmailVerificationCodeRepository

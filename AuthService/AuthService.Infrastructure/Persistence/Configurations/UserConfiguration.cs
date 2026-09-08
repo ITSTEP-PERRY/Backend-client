@@ -8,7 +8,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.ToTable("users");
+        builder.ToTable("users", table =>
+        {
+            table.HasCheckConstraint("ck_users_role", "role IN ('User', 'Admin')");
+            table.HasCheckConstraint("ck_users_status", "status IN ('Active', 'Deleted')");
+        });
 
         builder.HasKey(x => x.Id);
 
@@ -35,6 +39,20 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(x => x.EmailVerified)
             .HasColumnName("email_verified")
+            .IsRequired();
+
+        builder.Property(x => x.Role)
+            .HasColumnName("role")
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(UserRole.User)
+            .IsRequired();
+
+        builder.Property(x => x.Status)
+            .HasColumnName("status")
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(UserStatus.Active)
             .IsRequired();
 
         builder.Property(x => x.CreatedAt)

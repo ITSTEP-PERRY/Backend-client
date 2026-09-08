@@ -64,4 +64,24 @@ public class UserRepository : IUserRepository
 
         return Task.CompletedTask;
     }
+
+    public Task<User?> GetByIdReadOnlyAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyList<User>> GetPageAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
+        _dbContext.Users.AsNoTracking().CountAsync(cancellationToken);
 }

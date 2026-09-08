@@ -51,7 +51,8 @@ public class AuthService : IAuthService
         var user = new User
         {
             Id = Guid.NewGuid(), Email = email, PasswordHash = _passwordHasher.Hash(request.Password),
-            EmailVerified = false, FirstName = null, LastName = null, CreatedAt = now, UpdatedAt = now
+            EmailVerified = false, FirstName = null, LastName = null, Role = UserRole.User,
+            Status = UserStatus.Active, CreatedAt = now, UpdatedAt = now
         };
         var plaintextCode = _verificationCodes.GenerateCode();
         var code = new EmailVerificationCode
@@ -277,6 +278,8 @@ public class AuthService : IAuthService
         var user = await _users.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), cancellationToken);
         if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new AuthException(AuthErrorCodes.InvalidCredentials, "Invalid email or password.", 401);
+        if (user.Status == UserStatus.Deleted)
+            throw new AuthException(AuthErrorCodes.AccountDeleted, "The account is deleted.", 403);
         if (!user.EmailVerified)
             throw new AuthException(AuthErrorCodes.EmailNotVerified, "Email is not verified.", 403);
         if (!IsRegistrationCompleted(user))
@@ -293,6 +296,8 @@ public class AuthService : IAuthService
             throw new AuthException(AuthErrorCodes.InvalidRefreshToken, "Refresh token is invalid.", 401);
         if (token.ExpiresAt <= DateTime.UtcNow)
             throw new AuthException(AuthErrorCodes.RefreshTokenExpired, "Refresh token has expired.", 401);
+        if (token.User.Status == UserStatus.Deleted)
+            throw new AuthException(AuthErrorCodes.AccountDeleted, "The account is deleted.", 403);
 
         token.RevokedAt = DateTime.UtcNow;
         var remainingLifetime = token.ExpiresAt - token.CreatedAt;
@@ -389,7 +394,7 @@ public class AuthService : IAuthService
     public async Task<UserResponse> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var user = await _users.GetByIdAsync(userId, cancellationToken)
-            ?? throw new AuthException("USER_NOT_FOUND", "User was not found.", 404);
+            ?? throw new AuthException(AuthErrorCodes.UserNotFound, "User was not found.", 404);
         return MapUser(user);
     }
 
@@ -416,7 +421,8 @@ public class AuthService : IAuthService
 
     private static UserResponse MapUser(User user) => new()
     {
-        Id = user.Id, Email = user.Email, FirstName = user.FirstName, LastName = user.LastName, EmailVerified = user.EmailVerified
+        Id = user.Id, Email = user.Email, FirstName = user.FirstName, LastName = user.LastName,
+        EmailVerified = user.EmailVerified, Role = user.Role, Status = user.Status
     };
 
     private sealed record VerificationCodeDelivery(

@@ -12,6 +12,10 @@ public interface IUserRepository
         Guid id,
         CancellationToken cancellationToken = default);
 
+    Task<User?> GetByIdReadOnlyAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsByEmailAsync(
         string email,
         CancellationToken cancellationToken = default);
@@ -23,4 +27,11 @@ public interface IUserRepository
     Task UpdateAsync(
         User user,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<User>> GetPageAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }

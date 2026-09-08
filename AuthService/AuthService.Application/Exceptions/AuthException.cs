@@ -25,4 +25,8 @@ public static class AuthErrorCodes
     public const string PasswordResetCodeExpired = "PASSWORD_RESET_CODE_EXPIRED";
     public const string InvalidPasswordResetCode = "INVALID_PASSWORD_RESET_CODE";
     public const string PasswordResetAttemptsExceeded = "PASSWORD_RESET_ATTEMPTS_EXCEEDED";
+    public const string AccountDeleted = "ACCOUNT_DELETED";
+    public const string UserNotFound = "USER_NOT_FOUND";
+    public const string InvalidUserRole = "INVALID_USER_ROLE";
+    public const string InvalidUserStatus = "INVALID_USER_STATUS";
 }

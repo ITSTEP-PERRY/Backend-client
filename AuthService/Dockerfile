@@ -6,6 +6,7 @@ COPY ["AuthService.Api/AuthService.Api.csproj", "AuthService.Api/"]
 COPY ["AuthService.Application/AuthService.Application.csproj", "AuthService.Application/"]
 COPY ["AuthService.Domain/AuthService.Domain.csproj", "AuthService.Domain/"]
 COPY ["AuthService.Infrastructure/AuthService.Infrastructure.csproj", "AuthService.Infrastructure/"]
+COPY ["AuthService.Tests/AuthService.Tests.csproj", "AuthService.Tests/"]
 RUN dotnet restore "AuthService.slnx"
 
 COPY . .
