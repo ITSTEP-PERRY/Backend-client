@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using AuthService.Application.DTOs.Auth;
 using AuthService.Application.Interfaces;
+using AuthService.Application.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,7 +45,9 @@ public sealed class AuthSessionController(IAuthService authService, IWebHostEnvi
     public async Task<ActionResult<UserResponse>> Me(CancellationToken ct)
     {
         var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        return Guid.TryParse(subject, out var id) ? Ok(await authService.GetCurrentUserAsync(id, ct)) : Unauthorized();
+        if (!Guid.TryParse(subject, out var id))
+            throw new AuthException("UNAUTHORIZED", "Authentication is required.", 401);
+        return Ok(await authService.GetCurrentUserAsync(id, ct));
     }
 
     [HttpPost("forgot-password")]

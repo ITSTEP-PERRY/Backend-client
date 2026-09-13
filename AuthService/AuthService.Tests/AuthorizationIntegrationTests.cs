@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Xunit;
+using System.Text.Json;
 
 namespace AuthService.Tests;
 
@@ -26,12 +27,20 @@ public sealed class AuthorizationIntegrationTests : IClassFixture<AuthorizationI
     public AuthorizationIntegrationTests(Factory factory) => _factory = factory;
 
     [Fact]
-    public async Task Anonymous_AdminApi_IsUnauthorized() =>
-        Assert.Equal(HttpStatusCode.Unauthorized, (await _factory.CreateClient().GetAsync("/api/admin/users")).StatusCode);
+    public async Task Anonymous_AdminApi_IsUnauthorized()
+    {
+        var response = await _factory.CreateClient().GetAsync("/api/admin/users");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        await AssertError(response, "UNAUTHORIZED", "Authentication is required.");
+    }
 
     [Fact]
-    public async Task User_AdminApi_IsForbidden() =>
-        Assert.Equal(HttpStatusCode.Forbidden, (await SendUserGet(UserRole.User, "/api/admin/users")).StatusCode);
+    public async Task User_AdminApi_IsForbidden()
+    {
+        var response = await SendUserGet(UserRole.User, "/api/admin/users");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        await AssertError(response, "FORBIDDEN", "You do not have permission to perform this action.");
+    }
 
     [Fact]
     public async Task Admin_AdminApi_IsAllowed() =>
@@ -85,7 +94,14 @@ public sealed class AuthorizationIntegrationTests : IClassFixture<AuthorizationI
         return await client.SendAsync(request);
     }
 
-    public sealed class Factory : WebApplicationFactory<Program>
+    private static async Task AssertError(HttpResponseMessage response, string code, string message)
+    {
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(code, json.RootElement.GetProperty("code").GetString());
+        Assert.Equal(message, json.RootElement.GetProperty("message").GetString());
+    }
+
+    public class Factory : WebApplicationFactory<Program>
     {
         private const string UserSecret = "integration-user-signing-secret-at-least-32-chars";
         private const string InternalSecret = "integration-internal-signing-secret-32-chars";

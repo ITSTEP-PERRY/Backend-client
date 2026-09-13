@@ -1,5 +1,4 @@
 using AuthService.Application.DTOs.Auth;
-using AuthService.Application.Exceptions;
 using AuthService.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,15 +20,8 @@ public class AuthController : ControllerBase
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await _authService.RegisterAsync(request, cancellationToken);
-            return StatusCode(StatusCodes.Status201Created, response);
-        }
-        catch (DuplicateEmailException exception)
-        {
-            return Conflict(new { message = exception.Message });
-        }
+        var response = await _authService.RegisterAsync(request, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, response);
     }
 
     [HttpPost("verify-email")]
@@ -39,19 +31,8 @@ public class AuthController : ControllerBase
         [FromBody] VerifyEmailRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await _authService.VerifyEmailAsync(request, cancellationToken);
-            return Ok(response);
-        }
-        catch (EmailVerificationException exception)
-        {
-            return BadRequest(new
-            {
-                code = exception.ErrorCode,
-                message = exception.Message
-            });
-        }
+        var response = await _authService.VerifyEmailAsync(request, cancellationToken);
+        return Ok(response);
     }
 
     [HttpPost("resend-verification-code")]
@@ -63,35 +44,7 @@ public class AuthController : ControllerBase
         [FromBody] ResendVerificationCodeRequest request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await _authService.ResendVerificationCodeAsync(
-                request,
-                cancellationToken);
-
-            return Ok(response);
-        }
-        catch (EmailVerificationException exception)
-        {
-            var error = new
-            {
-                code = exception.ErrorCode,
-                message = exception.Message,
-                retryAfterSeconds = exception.RetryAfterSeconds
-            };
-
-            if (exception.ErrorCode == EmailVerificationErrorCodes.UserNotFound)
-            {
-                return NotFound(error);
-            }
-
-            if (exception.ErrorCode == EmailVerificationErrorCodes.ResendCooldownActive)
-            {
-                Response.Headers.RetryAfter = exception.RetryAfterSeconds.ToString();
-                return StatusCode(StatusCodes.Status429TooManyRequests, error);
-            }
-
-            return BadRequest(error);
-        }
+        var response = await _authService.ResendVerificationCodeAsync(request, cancellationToken);
+        return Ok(response);
     }
 }
