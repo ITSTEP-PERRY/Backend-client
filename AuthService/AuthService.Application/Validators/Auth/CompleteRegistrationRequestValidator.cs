@@ -10,22 +10,22 @@ public class CompleteRegistrationRequestValidator
     {
         RuleFor(x => x.RegistrationToken)
             .NotEmpty()
-            .WithMessage("Registration token is required.");
+            .WithMessage("Токен реєстрації є обов'язковим.");
 
         RuleFor(x => x.FirstName)
             .NotEmpty()
-            .WithMessage("First name is required.")
+            .WithMessage("Ім'я є обов'язковим.")
             .MinimumLength(2)
-            .WithMessage("First name must contain at least 2 characters.")
+            .WithMessage("Ім'я має містити щонайменше 2 символи.")
             .MaximumLength(50)
-            .WithMessage("First name is too long.");
+            .WithMessage("Ім'я не може перевищувати 50 символів.");
 
         RuleFor(x => x.LastName)
             .NotEmpty()
-            .WithMessage("Last name is required.")
+            .WithMessage("Прізвище є обов'язковим.")
             .MinimumLength(2)
-            .WithMessage("Last name must contain at least 2 characters.")
+            .WithMessage("Прізвище має містити щонайменше 2 символи.")
             .MaximumLength(50)
-            .WithMessage("Last name is too long.");
+            .WithMessage("Прізвище не може перевищувати 50 символів.");
     }
 }

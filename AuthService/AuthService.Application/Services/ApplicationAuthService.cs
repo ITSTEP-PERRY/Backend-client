@@ -260,6 +260,7 @@ public class AuthService : IAuthService
 
         var user = await _users.GetByIdAsync(userId, cancellationToken)
             ?? throw new AuthException(AuthErrorCodes.InvalidRegistrationToken, "Registration token is invalid or expired.", 403);
+        EnsureAccountActive(user);
         if (!user.EmailVerified)
             throw new AuthException(AuthErrorCodes.EmailNotVerified, "Email is not verified.", 403);
         if (IsRegistrationCompleted(user))
@@ -278,8 +279,7 @@ public class AuthService : IAuthService
         var user = await _users.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), cancellationToken);
         if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new AuthException(AuthErrorCodes.InvalidCredentials, "Invalid email or password.", 401);
-        if (user.Status == UserStatus.Deleted)
-            throw new AuthException(AuthErrorCodes.AccountDeleted, "The account is deleted.", 403);
+        EnsureAccountActive(user);
         if (!user.EmailVerified)
             throw new AuthException(AuthErrorCodes.EmailNotVerified, "Email is not verified.", 403);
         if (!IsRegistrationCompleted(user))
@@ -296,8 +296,7 @@ public class AuthService : IAuthService
             throw new AuthException(AuthErrorCodes.InvalidRefreshToken, "Refresh token is invalid.", 401);
         if (token.ExpiresAt <= DateTime.UtcNow)
             throw new AuthException(AuthErrorCodes.RefreshTokenExpired, "Refresh token has expired.", 401);
-        if (token.User.Status == UserStatus.Deleted)
-            throw new AuthException(AuthErrorCodes.AccountDeleted, "The account is deleted.", 403);
+        EnsureAccountActive(token.User);
 
         token.RevokedAt = DateTime.UtcNow;
         var remainingLifetime = token.ExpiresAt - token.CreatedAt;
@@ -419,11 +418,15 @@ public class AuthService : IAuthService
     private static bool IsRegistrationCompleted(User user) =>
         !string.IsNullOrWhiteSpace(user.FirstName) && !string.IsNullOrWhiteSpace(user.LastName);
 
-    private static UserResponse MapUser(User user) => new()
+    private static void EnsureAccountActive(User user)
     {
-        Id = user.Id, Email = user.Email, FirstName = user.FirstName, LastName = user.LastName,
-        EmailVerified = user.EmailVerified, Role = user.Role, Status = user.Status
-    };
+        if (user.Status == UserStatus.Blocked)
+            throw new AuthException(AuthErrorCodes.AccountBlocked, "Обліковий запис заблоковано.", 403);
+        if (user.Status == UserStatus.Deleted)
+            throw new AuthException(AuthErrorCodes.AccountDeleted, "Обліковий запис видалено.", 403);
+    }
+
+    private static UserResponse MapUser(User user) => UserResponseMapper.Map(user);
 
     private sealed record VerificationCodeDelivery(
         string Email,

@@ -4,5 +4,5 @@ namespace AuthService.Application.DTOs.Users;
 
 public sealed class UpdateUserRoleRequest
 {
-    public UserRole Role { get; set; }
+    public UserRole? Role { get; set; }
 }

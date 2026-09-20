@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using AuthService.Infrastructure.Persistence.Repositories;
 using AuthService.Infrastructure.Email;
+using AuthService.Infrastructure.Storage;
 using ApplicationAuthService = AuthService.Application.Services.AuthService;
 
 namespace AuthService.Infrastructure;
@@ -20,6 +21,9 @@ public static class DependencyInjection
         services.Configure<VerificationCodeOptions>(
             configuration.GetSection(
                 VerificationCodeOptions.SectionName));
+
+        services.Configure<BlobStorageOptions>(
+            configuration.GetSection(BlobStorageOptions.SectionName));
 
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
@@ -73,11 +77,16 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuthCodeConcurrencyLock, PostgresAuthCodeConcurrencyLock>();
+        services.AddScoped<IAdminUserMutationLock, PostgresAdminUserMutationLock>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IEmailChangeRequestRepository, EmailChangeRequestRepository>();
         services.AddScoped<IPasswordResetCodeRepository, PasswordResetCodeRepository>();
         services.AddHttpClient<IEmailService, ResendEmailService>();
         services.AddScoped<IAuthService, ApplicationAuthService>();
         services.AddScoped<IUserManagementService, AuthService.Application.Services.UserManagementService>();
+        services.AddScoped<IAccountService, AuthService.Application.Services.AccountService>();
+        services.AddScoped<IAvatarStorage, AzureBlobAvatarStorage>();
+        services.AddSingleton<IAccountOperationLogger, AccountOperationLogger>();
 
         services.AddScoped<
             IEmailVerificationCodeRepository,

@@ -22,6 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\AdminService\AdminService.Application\AdminService.Application.csproj" />
+    <ProjectReference Include="..\..\AdminService\AdminService.Infrastructure\AdminService.Infrastructure.csproj" />
     <ProjectReference Include="..\AuthService.Application\AuthService.Application.csproj" />
     <ProjectReference Include="..\AuthService.Domain\AuthService.Domain.csproj" />
     <ProjectReference Include="..\AuthService.Infrastructure\AuthService.Infrastructure.csproj" />

@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/AuthService/">
+    <Project Path="AuthService/AuthService.Api/AuthService.Api.csproj" />
+    <Project Path="AuthService/AuthService.Application/AuthService.Application.csproj" />
+    <Project Path="AuthService/AuthService.Domain/AuthService.Domain.csproj" />
+    <Project Path="AuthService/AuthService.Infrastructure/AuthService.Infrastructure.csproj" />
+    <Project Path="AuthService/AuthService.Tests/AuthService.Tests.csproj" />
+  </Folder>
+  <Folder Name="/AdminService/">
+    <Project Path="AdminService/AdminService.Api/AdminService.Api.csproj" />
+    <Project Path="AdminService/AdminService.Application/AdminService.Application.csproj" />
+    <Project Path="AdminService/AdminService.Infrastructure/AdminService.Infrastructure.csproj" />
+    <Project Path="AdminService/AdminService.Tests/AdminService.Tests.csproj" />
+  </Folder>
+</Solution>

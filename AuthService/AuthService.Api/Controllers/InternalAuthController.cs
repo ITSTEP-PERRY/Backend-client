@@ -2,6 +2,8 @@ using AuthService.Application.DTOs.Internal;
 using AuthService.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using AuthService.Api.Security;
 
 namespace AuthService.Api.Controllers;
 
@@ -11,6 +13,7 @@ public sealed class InternalAuthController(IServiceTokenService serviceTokens) :
 {
     [AllowAnonymous]
     [HttpPost("token")]
+    [EnableRateLimiting(RateLimitingConfiguration.InternalToken)]
     public ActionResult<ServiceTokenResponse> Token(ServiceTokenRequest request) =>
         Ok(serviceTokens.Issue(request.ServiceName, request.Credential));
 }

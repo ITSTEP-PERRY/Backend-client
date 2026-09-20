@@ -1,5 +1,6 @@
 ﻿using AuthService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
+using AuthService.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Api.Controllers;
@@ -24,10 +25,10 @@ public class DatabaseHealthController : ControllerBase
 
         if (!canConnect)
         {
-            return StatusCode(503, new
+            return StatusCode(503, new ApiErrorResponse
             {
-                status = "unhealthy",
-                database = "unavailable"
+                Code = "SERVICE_UNAVAILABLE",
+                Message = "Сервіс тимчасово недоступний."
             });
         }
 

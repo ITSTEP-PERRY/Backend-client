@@ -37,7 +37,7 @@ public sealed class ApiContractIntegrationTests
     }
 
     [Fact]
-    public async Task EmptyOrigins_FallsBackToAnyOriginWithoutCredentials()
+    public async Task EmptyOrigins_DoesNotAllowCrossOriginRequests()
     {
         await using var factory = new AuthorizationIntegrationTests.Factory();
         var client = factory.CreateClient();
@@ -46,7 +46,7 @@ public sealed class ApiContractIntegrationTests
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal("*", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
         Assert.False(response.Headers.Contains("Access-Control-Allow-Credentials"));
     }
 
@@ -59,7 +59,7 @@ public sealed class ApiContractIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         using var json = await ReadJson(response);
         Assert.Equal("VALIDATION_ERROR", json.RootElement.GetProperty("code").GetString());
-        Assert.Equal("One or more validation errors occurred.", json.RootElement.GetProperty("message").GetString());
+        Assert.Equal("Перевірте правильність введених даних.", json.RootElement.GetProperty("message").GetString());
         Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("email", out _));
         Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("password", out _));
     }
@@ -70,11 +70,11 @@ public sealed class ApiContractIntegrationTests
         await using var factory = new AuthorizationIntegrationTests.Factory();
         var response = await factory.CreateClient().GetAsync("/api/does-not-exist");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        await AssertError(response, "NOT_FOUND", "Resource was not found.");
+        await AssertError(response, "NOT_FOUND", "Запитаний ресурс не знайдено.");
     }
 
     [Theory]
-    [InlineData("/api/auth/register", HttpStatusCode.Conflict, "DUPLICATE_EMAIL")]
+    [InlineData("/api/auth/register", HttpStatusCode.Conflict, "EMAIL_ALREADY_REGISTERED")]
     [InlineData("/api/auth/resend-verification-code", HttpStatusCode.TooManyRequests, "RESEND_COOLDOWN_ACTIVE")]
     [InlineData("/api/auth/login", HttpStatusCode.InternalServerError, "INTERNAL_ERROR")]
     public async Task Exceptions_UseApiErrorContract(string path, HttpStatusCode status, string code)

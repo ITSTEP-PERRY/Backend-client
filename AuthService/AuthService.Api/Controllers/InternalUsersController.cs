@@ -11,10 +11,11 @@ namespace AuthService.Api.Controllers;
 [Authorize(AuthenticationSchemes = InternalAuthConstants.Scheme)]
 public sealed class InternalUsersController(IUserManagementService users) : ControllerBase
 {
+    private const string ActorHeader = "X-Admin-Actor-Id";
     [HttpGet]
     [Authorize(Policy = InternalAuthConstants.UsersReadPolicy)]
     public Task<PaginatedUsersResponse> GetUsers([FromQuery] GetUsersRequest request, CancellationToken ct) =>
-        users.GetUsersAsync(request.Page, request.PageSize, ct);
+        users.GetUsersAsync(request, ct);
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = InternalAuthConstants.UsersReadPolicy)]
@@ -23,11 +24,13 @@ public sealed class InternalUsersController(IUserManagementService users) : Cont
 
     [HttpPatch("{id:guid}/role")]
     [Authorize(Policy = InternalAuthConstants.UsersManagePolicy)]
-    public Task<UserManagementResponse> UpdateRole(Guid id, UpdateUserRoleRequest request, CancellationToken ct) =>
-        users.UpdateRoleAsync(id, request.Role, ct);
+    public Task<UserManagementResponse> UpdateRole(Guid id, UpdateUserRoleRequest request,
+        [FromHeader(Name = ActorHeader)] Guid actorId, CancellationToken ct) =>
+        users.UpdateRoleAsync(actorId, id, request.Role!.Value, ct);
 
     [HttpPatch("{id:guid}/status")]
     [Authorize(Policy = InternalAuthConstants.UsersManagePolicy)]
-    public Task<UserManagementResponse> UpdateStatus(Guid id, UpdateUserStatusRequest request, CancellationToken ct) =>
-        users.UpdateStatusAsync(id, request.Status, ct);
+    public Task<UserManagementResponse> UpdateStatus(Guid id, UpdateUserStatusRequest request,
+        [FromHeader(Name = ActorHeader)] Guid actorId, CancellationToken ct) =>
+        users.UpdateStatusAsync(actorId, id, request.Status!.Value, ct);
 }

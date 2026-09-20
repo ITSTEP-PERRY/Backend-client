@@ -13,4 +13,10 @@ public interface IEmailService
         string code,
         TimeSpan codeLifetime,
         CancellationToken cancellationToken = default);
+
+    Task SendEmailChangeCodeAsync(
+        string email,
+        string code,
+        TimeSpan codeLifetime,
+        CancellationToken cancellationToken = default);
 }

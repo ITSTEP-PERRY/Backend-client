@@ -11,7 +11,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.ToTable("users", table =>
         {
             table.HasCheckConstraint("ck_users_role", "role IN ('User', 'Admin')");
-            table.HasCheckConstraint("ck_users_status", "status IN ('Active', 'Deleted')");
+            table.HasCheckConstraint("ck_users_status", "status IN ('Active', 'Blocked', 'Deleted')");
         });
 
         builder.HasKey(x => x.Id);
@@ -62,6 +62,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.UpdatedAt)
             .HasColumnName("updated_at")
             .IsRequired();
+
+        builder.Property(x => x.AvatarBlobName)
+            .HasColumnName("avatar_blob_name")
+            .HasMaxLength(512);
 
         builder.HasIndex(x => x.Email)
             .IsUnique()

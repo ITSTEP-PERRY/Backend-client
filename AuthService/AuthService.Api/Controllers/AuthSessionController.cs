@@ -1,15 +1,20 @@
-using System.IdentityModel.Tokens.Jwt;
 using AuthService.Application.DTOs.Auth;
 using AuthService.Application.Interfaces;
 using AuthService.Application.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using AuthService.Api.Security;
 
 namespace AuthService.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthSessionController(IAuthService authService, IWebHostEnvironment environment) : ControllerBase
+public sealed class AuthSessionController(
+    IAuthService authService,
+    IWebHostEnvironment environment,
+    CsrfOriginValidator csrf,
+    ICurrentUserContext currentUser) : ControllerBase
 {
     private const string RefreshCookieName = "perry_refresh_token";
 
@@ -17,6 +22,7 @@ public sealed class AuthSessionController(IAuthService authService, IWebHostEnvi
     public async Task<ActionResult<CompleteRegistrationResponse>> Complete(CompleteRegistrationRequest request, CancellationToken ct) => Ok(await authService.CompleteRegistrationAsync(request, ct));
 
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitingConfiguration.Login)]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken ct)
     {
         var response = await authService.LoginAsync(request, ct);
@@ -25,16 +31,20 @@ public sealed class AuthSessionController(IAuthService authService, IWebHostEnvi
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting(RateLimitingConfiguration.Refresh)]
     public async Task<ActionResult<AuthResponse>> Refresh(CancellationToken ct)
     {
+        csrf.Validate(Request);
         var response = await authService.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = Request.Cookies[RefreshCookieName] ?? string.Empty }, ct);
         SetCookie(response);
         return Ok(response);
     }
 
     [HttpPost("logout")]
+    [EnableRateLimiting(RateLimitingConfiguration.Refresh)]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
+        csrf.Validate(Request);
         await authService.LogoutAsync(Request.Cookies[RefreshCookieName] ?? string.Empty, ct);
         Response.Cookies.Delete(RefreshCookieName, CookieOptions());
         return NoContent();
@@ -44,20 +54,19 @@ public sealed class AuthSessionController(IAuthService authService, IWebHostEnvi
     [HttpGet("me")]
     public async Task<ActionResult<UserResponse>> Me(CancellationToken ct)
     {
-        var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(subject, out var id))
-            throw new AuthException("UNAUTHORIZED", "Authentication is required.", 401);
-        return Ok(await authService.GetCurrentUserAsync(id, ct));
+        return Ok(await authService.GetCurrentUserAsync(currentUser.UserId, ct));
     }
 
     [HttpPost("forgot-password")]
+    [EnableRateLimiting(RateLimitingConfiguration.PasswordRecovery)]
     public async Task<IActionResult> Forgot(ForgotPasswordRequest request, CancellationToken ct)
     {
         await authService.ForgotPasswordAsync(request, ct);
-        return Ok(new { message = "If an account exists for this email, a reset code has been sent." });
+        return Ok(new { message = "Якщо обліковий запис існує, код скидання пароля надіслано." });
     }
 
     [HttpPost("reset-password")]
+    [EnableRateLimiting(RateLimitingConfiguration.PasswordRecovery)]
     public async Task<IActionResult> Reset(ResetPasswordRequest request, CancellationToken ct)
     {
         await authService.ResetPasswordAsync(request, ct);

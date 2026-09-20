@@ -5,5 +5,7 @@ namespace AuthService.Application.Validators.Users;
 
 public sealed class UpdateUserRoleRequestValidator : AbstractValidator<UpdateUserRoleRequest>
 {
-    public UpdateUserRoleRequestValidator() => RuleFor(x => x.Role).IsInEnum();
+    public UpdateUserRoleRequestValidator() => RuleFor(x => x.Role)
+        .NotNull().WithMessage("Роль є обов'язковою.")
+        .IsInEnum().WithMessage("Вказано недійсну роль.");
 }

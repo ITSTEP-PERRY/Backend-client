@@ -10,30 +10,32 @@ public class ResetPasswordRequestValidator
     {
         RuleFor(x => x.Email)
             .NotEmpty()
-            .WithMessage("Email is required.")
+            .WithMessage("Електронна пошта є обов'язковою.")
             .EmailAddress()
-            .WithMessage("Invalid email address.");
+            .WithMessage("Вкажіть коректну адресу електронної пошти.")
+            .MaximumLength(254)
+            .WithMessage("Електронна пошта не може перевищувати 254 символи.");
 
         RuleFor(x => x.Code)
             .NotEmpty()
-            .WithMessage("Reset code is required.")
+            .WithMessage("Код скидання пароля є обов'язковим.")
             .Length(6)
-            .WithMessage("Reset code must contain exactly 6 digits.")
+            .WithMessage("Код скидання пароля має містити рівно 6 цифр.")
             .Matches(@"^\d{6}$")
-            .WithMessage("Reset code must contain only digits.");
+            .WithMessage("Код скидання пароля має містити лише цифри.");
 
         RuleFor(x => x.NewPassword)
             .NotEmpty()
-            .WithMessage("Password is required.")
+            .WithMessage("Пароль є обов'язковим.")
             .MinimumLength(8)
-            .WithMessage("Password must contain at least 8 characters.")
+            .WithMessage("Пароль має містити щонайменше 8 символів.")
             .MaximumLength(128)
-            .WithMessage("Password is too long.");
+            .WithMessage("Пароль не може перевищувати 128 символів.");
 
         RuleFor(x => x.ConfirmPassword)
             .NotEmpty()
-            .WithMessage("Password confirmation is required.")
+            .WithMessage("Підтвердження пароля є обов'язковим.")
             .Equal(x => x.NewPassword)
-            .WithMessage("Passwords do not match.");
+            .WithMessage("Паролі не збігаються.");
     }
 }

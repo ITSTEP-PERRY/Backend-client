@@ -10,8 +10,10 @@ public class ForgotPasswordRequestValidator
     {
         RuleFor(x => x.Email)
             .NotEmpty()
-            .WithMessage("Email is required.")
+            .WithMessage("Електронна пошта є обов'язковою.")
             .EmailAddress()
-            .WithMessage("Invalid email address.");
+            .WithMessage("Вкажіть коректну адресу електронної пошти.")
+            .MaximumLength(254)
+            .WithMessage("Електронна пошта не може перевищувати 254 символи.");
     }
 }

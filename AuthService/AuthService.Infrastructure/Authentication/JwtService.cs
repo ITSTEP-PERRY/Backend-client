@@ -19,6 +19,7 @@ public sealed class JwtService(IOptions<JwtOptions> options) : IJwtService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("role", user.Role.ToString()),
+            new Claim(InternalAuthConstants.TokenUseClaim, InternalAuthConstants.TokenUseAccess),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         var credentials = new SigningCredentials(

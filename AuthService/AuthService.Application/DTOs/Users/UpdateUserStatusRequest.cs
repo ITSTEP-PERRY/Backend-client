@@ -4,5 +4,5 @@ namespace AuthService.Application.DTOs.Users;
 
 public sealed class UpdateUserStatusRequest
 {
-    public UserStatus Status { get; set; }
+    public UserStatus? Status { get; set; }
 }

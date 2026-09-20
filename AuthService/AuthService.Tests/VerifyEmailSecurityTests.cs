@@ -172,9 +172,10 @@ public sealed class VerifyEmailSecurityTests
 
         public Task AddAsync(User addedUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpdateAsync(User updatedUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<IReadOnlyList<User>> GetPageAsync(int page, int pageSize, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<User>> GetPageAsync(AuthService.Application.DTOs.Users.GetUsersRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<User>>([user]);
-        public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
+        public Task<int> CountAsync(AuthService.Application.DTOs.Users.GetUsersRequest request, CancellationToken cancellationToken = default) => Task.FromResult(1);
+        public Task<int> CountActiveAdminsAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
     }
 
     private sealed class FakeEmailVerificationCodeRepository(EmailVerificationCode code)
@@ -247,6 +248,8 @@ public sealed class VerifyEmailSecurityTests
             throw new NotSupportedException();
 
         public Task SendPasswordResetCodeAsync(string email, string code, TimeSpan codeLifetime, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+        public Task SendEmailChangeCodeAsync(string email, string code, TimeSpan codeLifetime, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
 

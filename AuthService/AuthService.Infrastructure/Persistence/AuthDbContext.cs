@@ -23,6 +23,9 @@ public class AuthDbContext : DbContext, IUnitOfWork
     public DbSet<RefreshToken> RefreshTokens
         => Set<RefreshToken>();
 
+    public DbSet<EmailChangeRequest> EmailChangeRequests
+        => Set<EmailChangeRequest>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

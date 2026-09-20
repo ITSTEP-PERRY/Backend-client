@@ -22,6 +22,53 @@ namespace AuthService.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AuthService.Domain.Entities.EmailChangeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("NewEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("new_email");
+
+                    b.Property<bool>("Used")
+                        .HasColumnType("boolean")
+                        .HasColumnName("used");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_email_change_requests_user_id");
+
+                    b.ToTable("email_change_requests", (string)null);
+                });
+
             modelBuilder.Entity("AuthService.Domain.Entities.EmailVerificationCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -152,6 +199,11 @@ namespace AuthService.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AvatarBlobName")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("avatar_blob_name");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -212,8 +264,19 @@ namespace AuthService.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_users_role", "role IN ('User', 'Admin')");
 
-                            t.HasCheckConstraint("ck_users_status", "status IN ('Active', 'Deleted')");
+                            t.HasCheckConstraint("ck_users_status", "status IN ('Active', 'Blocked', 'Deleted')");
                         });
+                });
+
+            modelBuilder.Entity("AuthService.Domain.Entities.EmailChangeRequest", b =>
+                {
+                    b.HasOne("AuthService.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AuthService.Domain.Entities.EmailVerificationCode", b =>

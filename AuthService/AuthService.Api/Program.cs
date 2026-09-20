@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using AuthService.Infrastructure;
 using AuthService.Api.Infrastructure;
+using AuthService.Api.Security;
 using AuthService.Infrastructure.Authentication;
 using AuthService.Api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -16,6 +17,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddRateLimiter(RateLimitingConfiguration.Configure);
+builder.Services.AddSingleton<CsrfOriginValidator>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<
     AuthService.Application.Validators.Auth.RegisterRequestValidator>();
@@ -40,10 +45,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true, ValidAudience = jwt.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningSecret)),
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
             ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
             NameClaimType = "sub", RoleClaimType = "role"
         };
-        options.Events = ApiJwtBearerEvents.Create();
+        options.Events = ApiJwtBearerEvents.Create(userAccessScheme: true);
     })
     .AddJwtBearer(InternalAuthConstants.Scheme, options =>
     {
@@ -54,10 +60,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true, ValidAudience = internalJwt.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(internalJwt.SigningSecret)),
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
             ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
             NameClaimType = "sub"
         };
-        options.Events = ApiJwtBearerEvents.Create();
+        options.Events = ApiJwtBearerEvents.Create(userAccessScheme: false);
     });
 builder.Services.AddAuthorization(options =>
 {
@@ -78,27 +85,7 @@ builder.Services.AddAuthorization(options =>
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.InvalidModelStateResponseFactory = context =>
-    {
-        var errors = context.ModelState
-            .Where(entry => entry.Value?.Errors.Count > 0)
-            .ToDictionary(
-                entry => System.Text.Json.JsonNamingPolicy.CamelCase.ConvertName(entry.Key),
-                entry => entry.Value!.Errors
-                    .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
-                        ? "The supplied value is invalid."
-                        : error.ErrorMessage)
-                    .ToArray());
-        return new BadRequestObjectResult(new ApiErrorResponse
-        {
-            Code = "VALIDATION_ERROR",
-            Message = "One or more validation errors occurred.",
-            Errors = errors
-        });
-    };
-});
+builder.Services.Configure<ApiBehaviorOptions>(ApiPipelineConfiguration.ConfigureInvalidModelState);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -118,18 +105,8 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Frontend", policy =>
-    {
-        var origins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
-        if (origins.Length > 0)
-            policy.WithOrigins(origins).AllowCredentials();
-        else
-            policy.AllowAnyOrigin();
-        policy.AllowAnyHeader().AllowAnyMethod();
-    });
-});
+builder.Services.AddCors(options => ApiPipelineConfiguration.AddCorsPolicy(
+    options, builder.Configuration, builder.Environment));
 
 builder.Services.AddHealthChecks();
 
@@ -142,18 +119,15 @@ app.UseExceptionHandler();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors("Frontend");
+app.UseCors(ApiPipelineConfiguration.CorsPolicyName);
 
 app.UseHttpsRedirection();
 
-app.UseStatusCodePages(async statusCodeContext =>
-{
-    var response = statusCodeContext.HttpContext.Response;
-    if (response.StatusCode == StatusCodes.Status404NotFound)
-        await ApiErrorWriter.WriteAsync(response, response.StatusCode, "NOT_FOUND", "Resource was not found.");
-});
+app.UseStatusCodePages(statusCodeContext =>
+    ApiPipelineConfiguration.WriteStatusCodeErrorAsync(statusCodeContext.HttpContext.Response));
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -166,15 +140,23 @@ public partial class Program;
 
 internal static class ApiJwtBearerEvents
 {
-    public static JwtBearerEvents Create() => new()
+    public static JwtBearerEvents Create(bool userAccessScheme) => new()
     {
+        OnTokenValidated = context =>
+        {
+            if (!userAccessScheme) return Task.CompletedTask;
+            var tokenUse = context.Principal?.FindFirst(InternalAuthConstants.TokenUseClaim)?.Value;
+            if (tokenUse is not null && !string.Equals(tokenUse, InternalAuthConstants.TokenUseAccess, StringComparison.Ordinal))
+                context.Fail("Unexpected token type.");
+            return Task.CompletedTask;
+        },
         OnChallenge = context =>
         {
             context.HandleResponse();
             return ApiErrorWriter.WriteAsync(context.Response, StatusCodes.Status401Unauthorized,
-                "UNAUTHORIZED", "Authentication is required.");
+                "UNAUTHORIZED", "Потрібна автентифікація.");
         },
         OnForbidden = context => ApiErrorWriter.WriteAsync(context.Response, StatusCodes.Status403Forbidden,
-            "FORBIDDEN", "You do not have permission to perform this action.")
+            "FORBIDDEN", "У вас недостатньо прав для виконання цієї дії.")
     };
 }

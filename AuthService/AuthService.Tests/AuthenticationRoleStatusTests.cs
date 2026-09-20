@@ -26,6 +26,7 @@ public sealed class AuthenticationRoleStatusTests
 
         Assert.Equal(user.Id.ToString(), token.Claims.Single(x => x.Type == JwtRegisteredClaimNames.Sub).Value);
         Assert.Equal("Admin", token.Claims.Single(x => x.Type == "role").Value);
+        Assert.Equal("access", token.Claims.Single(x => x.Type == "token_use").Value);
     }
 
     [Fact]
@@ -34,6 +35,14 @@ public sealed class AuthenticationRoleStatusTests
         var fixture = new Fixture(User(UserStatus.Deleted));
         var exception = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.LoginAsync(Login()));
         Assert.Equal(AuthErrorCodes.AccountDeleted, exception.ErrorCode);
+    }
+
+    [Fact]
+    public async Task BlockedUser_CannotLogin()
+    {
+        var exception = await Assert.ThrowsAsync<AuthException>(() =>
+            new Fixture(User(UserStatus.Blocked)).Service.LoginAsync(Login()));
+        Assert.Equal(AuthErrorCodes.AccountBlocked, exception.ErrorCode);
     }
 
     [Fact]
@@ -51,6 +60,15 @@ public sealed class AuthenticationRoleStatusTests
         var exception = await Assert.ThrowsAsync<AuthException>(() => fixture.Service.RefreshTokenAsync(
             new RefreshTokenRequest { RefreshToken = "refresh-token" }));
         Assert.Equal(AuthErrorCodes.AccountDeleted, exception.ErrorCode);
+    }
+
+    [Fact]
+    public async Task BlockedUser_CannotRefresh()
+    {
+        var exception = await Assert.ThrowsAsync<AuthException>(() =>
+            new Fixture(User(UserStatus.Blocked)).Service.RefreshTokenAsync(
+                new RefreshTokenRequest { RefreshToken = "refresh-token" }));
+        Assert.Equal(AuthErrorCodes.AccountBlocked, exception.ErrorCode);
     }
 
     private static LoginRequest Login() => new() { Email = "user@example.com", Password = "password" };
@@ -80,8 +98,9 @@ public sealed class AuthenticationRoleStatusTests
         public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default) => Task.FromResult(true);
         public Task AddAsync(User value, CancellationToken ct = default) => Task.CompletedTask;
         public Task UpdateAsync(User value, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<IReadOnlyList<User>> GetPageAsync(int page, int size, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>([user]);
-        public Task<int> CountAsync(CancellationToken ct = default) => Task.FromResult(1);
+        public Task<IReadOnlyList<User>> GetPageAsync(AuthService.Application.DTOs.Users.GetUsersRequest request, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>([user]);
+        public Task<int> CountAsync(AuthService.Application.DTOs.Users.GetUsersRequest request, CancellationToken ct = default) => Task.FromResult(1);
+        public Task<int> CountActiveAdminsAsync(CancellationToken ct = default) => Task.FromResult(user.Role == UserRole.Admin && user.Status == UserStatus.Active ? 1 : 0);
     }
     private sealed class Passwords : IPasswordHasher { public string Hash(string value) => "hash"; public bool Verify(string value, string hash) => true; }
     private sealed class Jwt : IJwtService { public string GenerateAccessToken(User user) => "access-token"; public int GetAccessTokenExpirationSeconds() => 900; }
@@ -121,6 +140,7 @@ public sealed class AuthenticationRoleStatusTests
     {
         public Task SendVerificationCodeAsync(string e, string c, TimeSpan l, CancellationToken ct = default) => Task.CompletedTask;
         public Task SendPasswordResetCodeAsync(string e, string c, TimeSpan l, CancellationToken ct = default) => Task.CompletedTask;
+        public Task SendEmailChangeCodeAsync(string e, string c, TimeSpan l, CancellationToken ct = default) => Task.CompletedTask;
     }
     private sealed class RegistrationTokens : IRegistrationTokenService { public string Generate(Guid id) => "token"; public Guid Validate(string token) => Guid.Empty; }
 }

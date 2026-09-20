@@ -21,4 +21,6 @@ public class User
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public string? AvatarBlobName { get; set; }
 }

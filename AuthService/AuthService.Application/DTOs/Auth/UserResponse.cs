@@ -15,4 +15,6 @@ public class UserResponse
     public AuthService.Domain.Entities.UserRole Role { get; set; }
 
     public AuthService.Domain.Entities.UserStatus Status { get; set; }
+
+    public string? AvatarUrl { get; set; }
 }

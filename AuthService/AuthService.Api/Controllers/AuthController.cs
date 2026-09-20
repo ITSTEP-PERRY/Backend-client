@@ -1,6 +1,8 @@
 using AuthService.Application.DTOs.Auth;
 using AuthService.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using AuthService.Api.Security;
 
 namespace AuthService.Api.Controllers;
 
@@ -13,6 +15,7 @@ public class AuthController : ControllerBase
     public AuthController(IAuthService authService) => _authService = authService;
 
     [HttpPost("register")]
+    [EnableRateLimiting(RateLimitingConfiguration.Register)]
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -25,6 +28,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("verify-email")]
+    [EnableRateLimiting(RateLimitingConfiguration.VerifyEmail)]
     [ProducesResponseType(typeof(VerifyEmailResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<VerifyEmailResponse>> VerifyEmail(
@@ -36,6 +40,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("resend-verification-code")]
+    [EnableRateLimiting(RateLimitingConfiguration.ResendVerification)]
     [ProducesResponseType(typeof(ResendVerificationCodeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -248,9 +248,10 @@ public sealed class AuthCodeConcurrencyTests
             Task.FromResult(email == user.Email);
         public Task AddAsync(User addedUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpdateAsync(User updatedUser, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<IReadOnlyList<User>> GetPageAsync(int page, int pageSize, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<User>> GetPageAsync(AuthService.Application.DTOs.Users.GetUsersRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<User>>([user]);
-        public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
+        public Task<int> CountAsync(AuthService.Application.DTOs.Users.GetUsersRequest request, CancellationToken cancellationToken = default) => Task.FromResult(1);
+        public Task<int> CountActiveAdminsAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
     }
 
     private sealed class MemoryEmailVerificationCodeRepository : IEmailVerificationCodeRepository
@@ -297,6 +298,7 @@ public sealed class AuthCodeConcurrencyTests
         { Interlocked.Increment(ref VerificationDeliveries); return Task.CompletedTask; }
         public Task SendPasswordResetCodeAsync(string email, string code, TimeSpan lifetime, CancellationToken cancellationToken = default)
         { Interlocked.Increment(ref PasswordResetDeliveries); return Task.CompletedTask; }
+        public Task SendEmailChangeCodeAsync(string email, string code, TimeSpan lifetime, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class RecordingRegistrationTokenService : IRegistrationTokenService

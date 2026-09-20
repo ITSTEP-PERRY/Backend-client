@@ -9,24 +9,24 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
     {
         RuleFor(x => x.Email)
             .NotEmpty()
-            .WithMessage("Email is required.")
+            .WithMessage("Електронна пошта є обов'язковою.")
             .EmailAddress()
-            .WithMessage("Invalid email address.")
+            .WithMessage("Вкажіть коректну адресу електронної пошти.")
             .MaximumLength(254)
-            .WithMessage("Email is too long.");
+            .WithMessage("Електронна пошта не може перевищувати 254 символи.");
 
         RuleFor(x => x.Password)
             .NotEmpty()
-            .WithMessage("Password is required.")
+            .WithMessage("Пароль є обов'язковим.")
             .MinimumLength(8)
-            .WithMessage("Password must contain at least 8 characters.")
+            .WithMessage("Пароль має містити щонайменше 8 символів.")
             .MaximumLength(128)
-            .WithMessage("Password is too long.");
+            .WithMessage("Пароль не може перевищувати 128 символів.");
 
         RuleFor(x => x.ConfirmPassword)
             .NotEmpty()
-            .WithMessage("Password confirmation is required.")
+            .WithMessage("Підтвердження пароля є обов'язковим.")
             .Equal(x => x.Password)
-            .WithMessage("Passwords do not match.");
+            .WithMessage("Паролі не збігаються.");
     }
 }

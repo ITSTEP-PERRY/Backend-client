@@ -54,6 +54,19 @@ public sealed class ResendEmailService : IEmailService
             codeLifetime,
             cancellationToken);
 
+    public Task SendEmailChangeCodeAsync(
+        string email,
+        string code,
+        TimeSpan codeLifetime,
+        CancellationToken cancellationToken = default) =>
+        SendCodeAsync(
+            email,
+            "Зміна електронної пошти — Perry",
+            "Підтвердження нової електронної пошти",
+            code,
+            codeLifetime,
+            cancellationToken);
+
     private async Task SendCodeAsync(
         string email,
         string subject,

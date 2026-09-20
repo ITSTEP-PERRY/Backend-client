@@ -29,9 +29,12 @@ public interface IUserRepository
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<User>> GetPageAsync(
-        int page,
-        int pageSize,
+        AuthService.Application.DTOs.Users.GetUsersRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<int> CountAsync(CancellationToken cancellationToken = default);
+    Task<int> CountAsync(
+        AuthService.Application.DTOs.Users.GetUsersRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountActiveAdminsAsync(CancellationToken cancellationToken = default);
 }
